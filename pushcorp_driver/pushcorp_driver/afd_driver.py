@@ -35,7 +35,7 @@ class AFDDriver(Node):
         # Get the parameter values
         self.ip = self.get_parameter('ip').get_parameter_value().string_value
         self.port = self.get_parameter('port').get_parameter_value().integer_value
-        period = self.get_parameter('period').get_parameter_value().double_value
+        self.period = self.get_parameter('period').get_parameter_value().double_value
 
         # Create the ROS2 interfaces
         self.pos_pub = self.create_publisher(Value, 'afd/position', 10)
@@ -46,7 +46,7 @@ class AFDDriver(Node):
         self.command_position_server = self.create_service(CommandValue, 'command_position', self.command_position)
 
         # Create a timer for reading from the AFD
-        self.timer = self.create_timer(period, self.publish_udp_data)
+        self.timer = self.create_timer(self.period, self.publish_udp_data)
 
     def send(self,
              udp_socket: socket.socket,
@@ -81,20 +81,19 @@ class AFDDriver(Node):
 
         # Socket communication
         udp_socket = create_socket()
-        udp_socket.settimeout(0.3)
+        udp_socket.settimeout(self.period * 1.5)
         try:
             pos_msg = populate_value(udp_socket, POSITION_ENDPOINT)
+            if pos_msg is not None:
+                self.pos_pub.publish(pos_msg)
+
             force_msg = populate_value(udp_socket, FORCE_ENDPOINT)
+            if force_msg is not None:
+                self.force_pub.publish(force_msg)
+
         except:
             self.get_logger().info('udp socket timed out')
         udp_socket.close()
-
-        # Publish the ROS message
-        if pos_msg is not None:
-            self.pos_pub.publish(pos_msg)
-
-        if force_msg is not None:
-            self.force_pub.publish(force_msg)
 
     def weigh_payload(self, _req: Trigger.Request, res: Trigger.Response) -> Trigger.Response:
         udp_socket = create_socket()
