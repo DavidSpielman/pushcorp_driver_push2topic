@@ -7,6 +7,9 @@ import socket
 import time 
 import json
 
+# For testing
+import numpy as np
+
 
 POSITION_ENDPOINT = "/afd/actualPosition"
 FORCE_ENDPOINT = "/afd/actualForce"
@@ -48,6 +51,12 @@ class AFDDriver(Node):
         # Create a timer for reading from the AFD
         self.timer = self.create_timer(self.period, self.publish_udp_data)
 
+        # For testing
+        self.start_time = 0
+        self.end_time = 0
+        self.udp_time = []
+        self.median_udp_time = np.array(self.udp_time)
+
     def send(self,
              udp_socket: socket.socket,
              endpoint: str,
@@ -81,11 +90,20 @@ class AFDDriver(Node):
 
         # Socket communication
         udp_socket = create_socket()
-        udp_socket.settimeout(self.period * 1.5)
+        # For testing
+        udp_socket.settimeout(self.period * 1.3)
         try:
+            # For testing
+            self.start_time = time.time()
             pos_msg = populate_value(udp_socket, POSITION_ENDPOINT)
             if pos_msg is not None:
                 self.pos_pub.publish(pos_msg)
+                # For testing
+                self.end_time = time.time()
+                self.udp_time.append(self.end_time - self.start_time)
+                udp_time_array = np.array(self.udp_time)
+                self.median_udp_time = np.median(udp_time_array)
+                print(f'Median udp time is {self.median_udp_time}')
 
             force_msg = populate_value(udp_socket, FORCE_ENDPOINT)
             if force_msg is not None:
