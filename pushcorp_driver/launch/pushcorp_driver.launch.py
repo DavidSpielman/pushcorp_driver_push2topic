@@ -10,7 +10,7 @@ def generate_launch_description():
     parameters = {
         'ip': '192.168.0.12',
         'port': 1993,
-        'period': 0.1
+        'period': 0.0025
     }    
     
     # Launch AFD driver
